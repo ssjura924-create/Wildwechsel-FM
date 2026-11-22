@@ -1,0 +1,42 @@
+name: Ralle Animation Test
+on:
+  workflow_dispatch:
+    inputs:
+      free_trial_confirmed:
+        description: "Confirm current Agnes account trial price is zero"
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  animation:
+    if: inputs.free_trial_confirmed == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Generate and retrieve pilot
+        env:
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+        run: |
+          set -eu
+          test -n "$AGNES_API_KEY"
+          curl --fail --silent --show-error --max-time 60 -X POST https://apihub.agnes-ai.com/v1/videos -H "Authorization: Bearer $AGNES_API_KEY" -H "Content-Type: application/json" -d '{"model":"agnes-video-2.5-flash","prompt":"Photorealistic anthropomorphic raccoon street reporter, expressive paws, natural head and mouth movements, confident comedic gestures, waist-up, evenly lit solid green background, stationary camera, no text, no logos","seconds":"5","mode":"text","size":"720P","aspect_ratio":"9:16","n":1}' > task.json
+          id=$(jq -er '.video_id' task.json)
+          for i in $(seq 1 120); do
+            curl --fail --silent --show-error --max-time 15 --get https://apihub.agnes-ai.com/agnesapi -H "Authorization: Bearer $AGNES_API_KEY" --data-urlencode "video_id=$id" --data-urlencode "model_name=agnes-video-2.5-flash" > result.json
+            status=$(jq -r '.status' result.json)
+            if [ "$status" = completed ]; then
+              url=$(jq -er '.url | select(startswith("https://"))' result.json)
+              curl --fail --silent --show-error --max-time 60 --proto '=https' "$url" -o ralle-test.mp4
+              ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height -of json ralle-test.mp4
+              exit 0
+            fi
+            if [ "$status" = failed ]; then exit 1; fi
+            sleep 2
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ralle-animation-test
+          path: ralle-test.mp4
