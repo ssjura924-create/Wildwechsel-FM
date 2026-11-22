@@ -1,0 +1,48 @@
+name: Ralle - Stimmencasting
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/voices.yml'
+permissions:
+  contents: read
+jobs:
+  casting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          python -m pip install piper-tts
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Create three voice auditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p models casting
+          get_model() {
+            curl -fL --retry 3 --max-time 180 "$1" -o "models/$2.onnx"
+            curl -fL --retry 3 --max-time 180 "$1.json" -o "models/$2.onnx.json"
+          }
+          base=https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE
+          get_model "$base/thorsten_emotional/medium/de_DE-thorsten_emotional-medium.onnx" emotional
+          get_model "$base/karlsson/low/de_DE-karlsson-low.onnx" karlsson
+          get_model "https://huggingface.co/Thorsten-Voice/Hessisch/resolve/0e72335/Thorsten-Voice_Hessisch_Piper_high-Oct2023.onnx" hessisch
+          line='Sach mal, Bruder! Du fährst seit zwei Stunden durch Vice City und hast noch nicht einmal hinter die Tankstelle geguckt? Augen auf, Pfoten raus! Hier ist Ralle, Wildwechsel FM.'
+          dialect='Ei, sach emol, Bub! Du fährst seit zwei Stunde durch Vice City und hast noch net emol hintern die Tankstell geguckt? Aache uff, Pfote raus! Hier is Ralle, Wildwechsel FM.'
+          python -m piper -m models/emotional.onnx -f models/a.wav --speaker 0 -- "$line"
+          python -m piper -m models/karlsson.onnx -f models/b.wav -- "$line"
+          python -m piper -m models/hessisch.onnx -f models/c.wav -- "$dialect"
+          ffmpeg -v error -y -i models/a.wav -af 'asetrate=20947.5,aresample=22050,atempo=1.12,highpass=f=85,acompressor=threshold=0.12:ratio=3,loudnorm=I=-16:TP=-1.5:LRA=7' -c:a libmp3lame -b:a 128k casting/01-frecher-reporter.mp3
+          ffmpeg -v error -y -i models/b.wav -af 'highpass=f=85,acompressor=threshold=0.12:ratio=3,loudnorm=I=-16:TP=-1.5:LRA=7' -c:a libmp3lame -b:a 128k casting/02-karlsson.mp3
+          ffmpeg -v error -y -i models/c.wav -af 'highpass=f=85,acompressor=threshold=0.12:ratio=3,loudnorm=I=-16:TP=-1.5:LRA=7' -c:a libmp3lame -b:a 128k casting/03-hessischer-ralle.mp3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ralle-stimmencasting
+          path: casting/
+          if-no-files-found: error
+          retention-days: 7
