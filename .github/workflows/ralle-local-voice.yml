@@ -12,7 +12,7 @@ jobs:
           python -m piper.download_voices de_DE-thorsten-medium de_DE-thorsten_emotional-medium
           mkdir -p stimmen
           for model in de_DE-thorsten-medium de_DE-thorsten_emotional-medium; do
-            echo "Bruder, ich wollte nur kurz ein Auto kaufen. Jetzt habe ich drei Sterne und nicht mal einen Führerschein. Willkommen bei Wildwechsel FM." | python -m piper --model "$model.onnx" --output_file "stimmen/$model.wav"
+            printf '%s\n' "Warte mal. Halt hier kurz an. Hier. Ja. ... Was machst du denn? Nein, steig nicht aus! Ich bin noch am Erklären. ... Gut. Dann geh ich jetzt auch mit." | python -m piper --model "$model.onnx" --output_file "stimmen/$model.wav"
           done
       - uses: actions/upload-artifact@v4
         with:
