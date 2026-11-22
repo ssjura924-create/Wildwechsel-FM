@@ -15,7 +15,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f inputs/gameplay.mp4
+          if [[ ! -f inputs/gameplay.mp4 ]]; then
+            mkdir -p inputs
+            ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc2=size=1280x720:rate=30 -t 5 -c:v libx264 -pix_fmt yuv420p inputs/gameplay.mp4
+            printf '1\n00:00:00,000 --> 00:00:05,000\nWILDWECHSEL FM - TECHNIKTEST\n' > inputs/captions.srt
+          fi
           args=(--gameplay inputs/gameplay.mp4 --output output/wildwechsel.mp4)
           [[ ! -f inputs/voice.wav ]] || args+=(--voice inputs/voice.wav)
           [[ ! -f inputs/ralle.png ]] || args+=(--ralle inputs/ralle.png)
