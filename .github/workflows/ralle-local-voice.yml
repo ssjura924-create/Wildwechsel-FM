@@ -1,0 +1,20 @@
+name: Ralle kostenlose Offline-Stimme
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: |
+          pip install piper-tts
+          python -m piper.download_voices de_DE-thorsten-medium de_DE-thorsten_emotional-medium
+          mkdir -p stimmen
+          for model in de_DE-thorsten-medium de_DE-thorsten_emotional-medium; do
+            echo "Bruder, ich wollte nur kurz ein Auto kaufen. Jetzt habe ich drei Sterne und nicht mal einen Führerschein. Willkommen bei Wildwechsel FM." | python -m piper --model "$model.onnx" --output_file "stimmen/$model.wav"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ralle-stimmen
+          path: stimmen/
