@@ -43,7 +43,7 @@ def run():
     f = ['[0:v]fps=30,split=2[bg][game]', '[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:2,setsar=1[b]', '[game]scale=1080:1920:force_original_aspect_ratio=decrease,setsar=1[g]', '[b][g]overlay=(W-w)/2:(H-h)/2[base]']
     v = 'base'
     if avatar is not None:
-        f += [f'[{avatar}:v]scale=380:-2,format=rgba[r]', '[base][r]overlay=60:H-h-300:eof_action=repeat[withralle]']
+        f += [f'[{avatar}:v]scale=380:-2,format=rgba[r]', '[base][r]overlay=x=60+8*sin(t*2):y=H-h-300+5*sin(t*3):eof_action=repeat[withralle]']
         v = 'withralle'
     with tempfile.TemporaryDirectory(prefix='wildwechsel-') as tmp:
         if a.subtitles:
