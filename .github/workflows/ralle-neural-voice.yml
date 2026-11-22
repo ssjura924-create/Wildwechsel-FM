@@ -1,0 +1,38 @@
+name: Ralle neuronales Stimmcasting
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Install CPU speech model
+        run: |
+          python -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install qwen-tts soundfile
+          sudo apt-get update
+          sudo apt-get install -y sox
+      - name: Generate original character voice
+        env:
+          OMP_NUM_THREADS: "4"
+        run: |
+          mkdir -p stimmen
+          python - <<'PY'
+          import torch
+          import soundfile as sf
+          from qwen_tts import Qwen3TTSModel
+          model = Qwen3TTSModel.from_pretrained("Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign", device_map="cpu", dtype=torch.float32, attn_implementation="eager")
+          text = "Warte, warte. Mach mal den Motor aus. Ich erklär dir das eben. ... Warum steigst du jetzt aus? Ich rede doch noch mit dir!"
+          for name, style in [
+              ("ralle-a", "Adult German male, warm slightly raspy mid-low voice, informal conversational speech, spontaneous changes from calm explanation to irritated disbelief, natural pauses, no announcer delivery."),
+              ("ralle-b", "Adult German male, distinctive slightly nasal gravelly voice, relaxed conversational rhythm, self-important but endearing, expressive surprise, realistic spoken German, no exaggerated cartoon voice.")
+          ]:
+              wavs, sr = model.generate_voice_design(text=text, language="German", instruct=style)
+              sf.write("stimmen/" + name + ".wav", wavs[0], sr)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ralle-neural-stimmen
+          path: stimmen/*.wav
