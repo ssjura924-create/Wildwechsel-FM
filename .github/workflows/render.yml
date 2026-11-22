@@ -1,0 +1,28 @@
+name: Wildwechsel FM Render
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+      - name: Render video
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f inputs/gameplay.mp4
+          args=(--gameplay inputs/gameplay.mp4 --output output/wildwechsel.mp4)
+          [[ ! -f inputs/voice.wav ]] || args+=(--voice inputs/voice.wav)
+          [[ ! -f inputs/ralle.png ]] || args+=(--ralle inputs/ralle.png)
+          [[ ! -f inputs/captions.srt ]] || args+=(--subtitles inputs/captions.srt)
+          python3 render.py "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wildwechsel-video
+          path: output/wildwechsel.mp4
+          if-no-files-found: error
